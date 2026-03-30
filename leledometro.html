@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <title>Λελεδόμετρο</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --danger: #ef4444;
+    }
+    .light {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #16a34a;
+      --danger: #dc2626;
+    }
+    body {
+      font-family: system-ui, -apple-system, Arial, sans-serif;
+      background-image: url("theme.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 16px;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+    }
+    h2 { margin: 0 0 10px; }
+    p { color: var(--muted); margin: 6px 0; }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: none;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+    button { cursor: pointer; }
+    .row { display: flex; gap: 8px; }
+    .result { margin-top: 15px; font-size: 1.2em; }
+    .progress {
+      height: 10px;
+      background: #334155;
+      border-radius: 10px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .bar {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .quote {
+      margin-top: 10px;
+      font-style: italic;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Λελεδόμετρο</h2>
+
+    <p>Ημερομηνία κατάταξης:</p>
+    <input type="date" id="startDate">
+
+    <p>Ημερομηνία απόλυσης:</p>
+    <input type="date" id="endDate">
+
+    <div class="row">
+      <input type="number" id="services" placeholder="Υπηρεσίες">
+      <input type="number" id="leaves" placeholder="Άδειες">
+    </div>
+
+    <button onclick="saveData()">Αποθήκευση</button>
+    <button onclick="toggleTheme()">Theme</button>
+    <button onclick="exportData()">Export</button>
+
+    <div class="result" id="result"></div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="quote" id="quote"></div>
+  </div>
+
+  <script>
+    const quotes = [
+      "Μια μέρα λιγότερη, πιο κοντά στο σπίτι.",
+      "Κρατά γερά, τελειώνει.",
+      "Ο χρόνος περνάει, ακόμα κι αν δεν το νιώθεις.",
+      "Μη βαράς σκοπιά με το μυαλό αλλού… πλησιάζει.",
+      "Το τέλος φαίνεται στον ορίζοντα."
+    ];
+
+    const milestones = [100, 75, 50, 25, 10, 5, 0];
+
+    function calculate() {
+      const start = new Date(document.getElementById('startDate').value);
+      const end = new Date(document.getElementById('endDate').value);
+      const today = new Date();
+
+      if (!start || !end) return;
+
+      const total = end - start;
+      const done = today - start;
+      const left = end - today;
+
+      const totalDays = Math.ceil(total / (1000*60*60*24));
+      const doneDays = Math.ceil(done / (1000*60*60*24));
+      const leftDays = Math.ceil(left / (1000*60*60*24));
+
+      const percent = Math.min(100, Math.max(0, (doneDays / totalDays) * 100));
+
+      const services = document.getElementById('services').value || 0;
+      const leaves = document.getElementById('leaves').value || 0;
+
+      const result = document.getElementById('result');
+
+      if (leftDays > 0) {
+        result.innerHTML = `Μένουν <b>${leftDays}</b> μέρες<br>Έχεις φάει ${doneDays}/${totalDays} (${percent.toFixed(1)}%)<br>Υπηρεσίες: ${services} | Άδειες: ${leaves}`;
+      } else {
+        result.innerHTML = `Απολύθηκες! 🫡`;
+      }
+
+      document.getElementById('bar').style.width = percent + "%";
+      document.getElementById('quote').innerText = quotes[Math.floor(Math.random()*quotes.length)];
+
+      handleNotifications(leftDays, percent);
+    }
+
+    function saveData() {
+      const data = {
+        start: document.getElementById('startDate').value,
+        end: document.getElementById('endDate').value,
+        services: document.getElementById('services').value,
+        leaves: document.getElementById('leaves').value,
+        theme: document.body.classList.contains('light') ? 'light' : 'dark'
+      };
+      localStorage.setItem('leledometro', JSON.stringify(data));
+      calculate();
+    }
+
+    function loadData() {
+      const data = JSON.parse(localStorage.getItem('leledometro'));
+      if (!data) return;
+      document.getElementById('startDate').value = data.start || '';
+      document.getElementById('endDate').value = data.end || '';
+      document.getElementById('services').value = data.services || '';
+      document.getElementById('leaves').value = data.leaves || '';
+      if (data.theme === 'light') document.body.classList.add('light');
+      calculate();
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('light');
+      saveData();
+    }
+
+    function exportData() {
+      const data = localStorage.getItem('leledometro');
+      const blob = new Blob([data], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'leledometro.json';
+      a.click();
+    }
+
+    function handleNotifications(daysLeft, percent) {
+      if (!('Notification' in window)) return;
+
+      const sent = JSON.parse(localStorage.getItem('milestonesSent') || '{}');
+
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+
+      milestones.forEach(m => {
+        const key = 'm' + m;
+
+        if (percent >= m && !sent[key]) {
+          new Notification(`Milestone: ${m}%`);
+          sent[key] = true;
+        }
+      });
+
+      if (daysLeft === 100 && !sent.d100) {
+        new Notification('Μένουν 100 μέρες!');
+        sent.d100 = true;
+      }
+
+      localStorage.setItem('milestonesSent', JSON.stringify(sent));
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
